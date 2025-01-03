@@ -63,11 +63,25 @@ u16 inst_pop(cpu_t *cpu, busptr_t *r1)
 	return val;
 }
 
-u16 inst_st_ld(cpu_t *cpu, busptr_t *r1, busptr_t *r2)
+u16 inst_st_ld(cpu_t *cpu, busptr_t *r1, busptr_t *r2, int len)
 {
+	u16 t1;
+	u16 t2;
+	if (len == 1) {
+		if (r2->type == BUS_MEM) {
+			t2 = cpu_bus_read(cpu, r2);
+			t2 >>= 8;
+		} else if (r2->type == BUS_REG) {
+			t2 = cpu_bus_read(cpu, r2);
+			t2 &= 0xFF;
+		}
+
+		cpu_bus_write(cpu, r1, t1);
+	} else if (len == 2) {
+		t1 = cpu_bus_read(cpu, r2);
+		cpu_bus_write(cpu, r1, t1);
+	}
 	printf("st/ld %4x %4x\n", cpu_bus_read(cpu, r1), cpu_bus_read(cpu, r2));
-	u16 t1 = cpu_bus_read(cpu, r2);
-	cpu_bus_write(cpu, r1, t1);
 	return t1;
 }
 
@@ -107,6 +121,12 @@ void cpu_advance(cpu_t *cpu)
 	u16 opcode = cpu_bus_read(cpu, &r1);
 	u16 inst = opcode >> 12;
 	u16 admode = (opcode & 0x8) >> 3;
+
+	int len;
+	if (opcode & INST_MASK_LEN)
+		len = 2;
+	else
+		len = 1;
 
 	if (inst >= n_inst) {
 		IP_ADVANCE(cpu, 1);
@@ -178,10 +198,10 @@ void cpu_advance(cpu_t *cpu)
 		break;
 	}
 
-	u16 (*inst_func)(cpu_t *, busptr_t *, busptr_t *) = inst_select[inst];
+	u16 (*inst_func)(cpu_t *, busptr_t *, busptr_t *, int) = inst_select[inst];
 	printf("ip: %4x opcode: %4x: ", ip, opcode);
 	u16 ip_cur = cpu->ip;
-	u16 result = inst_func(cpu, &r1, &r2);
+	u16 result = inst_func(cpu, &r1, &r2, len);
 
 	INVALIDATE_FLAGS(cpu);
 

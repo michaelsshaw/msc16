@@ -40,7 +40,9 @@ JNZ (IMM/REG)                   |  (IMM/REG)   -> (IP)   |  0x3    |
 PUSH (REG)                      |  (REG)  -> (--SP)      |  0x4    |
 POP (REG)                       |  (SP++) -> (REG)       |  0x5    |
 ST (IMM/REGPTR) (REG)           |  (REG)  -> (MEM)       |  0x6    |
+    STB (IMM/REGPTR) (REG)      |  (REG)  -> (MEM)       |  0x6    |
 LD (REG) (IMM/REGPTR)           |  (MEM)  -> (REG)       |  0x7    |
+    LDB (REG) (IMM/REGPTR)      |  (MEM)  -> (REG)       |  0x7    |
 OR  (R1) (R2) -> (R1)           |  (R1) | (R2)  -> (R1)  |  0x8    |
 AND (R1) (R2) -> (R1)           |  (R1) & (R2)  -> (R1)  |  0x9    |
 XOR (R1) (R2) -> (R1)           |  (R1) ^ (R2)  -> (R1)  |  0xA    |
@@ -71,11 +73,13 @@ All instructions are of 16-bit length, stored in memory in little-endian format
 After reading from memory, we decode the instruction into the following format:
 
 ```
-AAAA RRRR BBCC MRRR
+AAAA RRRR BBCC MLRR
 
 A: Instruction
 B: R1
 C: R2
+L: Length (1 for 1 byte, 0 for 2 bytes)
+    Only available on ST and LD instructions
 M: Mode (1 for immediate)
 R: Reserved
 ```

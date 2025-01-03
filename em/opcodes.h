@@ -14,6 +14,7 @@ typedef unsigned long long u64;
 #define INST_POP 0x5
 #define INST_ST 0x6
 #define INST_LD 0x7
+#define INST_MASK_LEN 0x4
 #define INST_OR 0x8
 #define INST_AND 0x9
 #define INST_XOR 0xA
