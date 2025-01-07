@@ -19,6 +19,7 @@ module msc16rt(
 	localparam ALU_RSH = 3'b110;
 
 	localparam S_CMP = 8'h00;
+	localparam S_CMP_2 = 8'h10;
 	localparam S_ADD = 8'h01;
 	localparam S_SUB = 8'h02;
 	localparam S_JNZ = 8'h03;
@@ -48,7 +49,6 @@ module msc16rt(
 	localparam S_REGPTR = 8'hf4;
 
 	localparam S_ARITH_2 = 8'hf5;
-	localparam S_CMP_2 = 8'hf6;
 	localparam S_RESULT = 8'hf7;
 
 	localparam F_ZERO = 1;
@@ -59,56 +59,56 @@ module msc16rt(
 	wire [15:0] data_bus;
 
 	/* Internal registers */
-	reg i_alu_en;
-	reg [2:0] i_alu_op;
-	reg [15:0] i_alu_a;
-	reg [15:0] i_alu_b;
+	reg i_alu_en = 0;
+	reg [2:0] i_alu_op = 0;
+	reg [15:0] i_alu_a = 0;
+	reg [15:0] i_alu_b = 0;
 
-	reg i_mem_we;
-	reg [15:0] i_mem_out;
-	reg [15:0] i_mem_addr;
-	reg [15:0] i_mem_in;
+	reg [15:0] data_bus = 0;
 
-	reg [15:0] i_opcode;
+	reg i_mem_we = 0;
+	reg [15:0] i_mem_out = 0;
+	reg [15:0] i_mem_addr = 0;
+	reg [15:0] i_mem_in = 0;
 
-	reg i_single_byte;
-	reg i_immediate;
-	reg [7:0] i_next_state;
-	reg [7:0] i_cur_state;
+	reg [15:0] i_opcode = 0;
 
-	reg [15:0] i_result;
+	reg i_single_byte = 0;
+	reg i_immediate = 0;
+	reg [7:0] i_next_state = 0;
+	reg [7:0] i_cur_state = S_FETCH;
 
-	reg [1:0] i_reg_sel_1;
-	reg [1:0] i_reg_sel_2;
+	reg [15:0] i_result = 0;
 
-	reg [1:0] i_reg_sel_mem;
+	reg [1:0] i_reg_sel_1 = 0;
+	reg [1:0] i_reg_sel_2 = 0;
 
-	reg [15:0] i_r1;
-	reg [15:0] i_r2;
+	reg [1:0] i_reg_sel_mem = 0;
 
-	reg [3:0] i_instr;
+	reg [15:0] i_r1 = 0;
+	reg [15:0] i_r2 = 0;
 
-	reg i_data_we;
-	reg [15:0] i_data_out;
+	reg [3:0] i_instr = 0;
+
+	reg i_data_we = 0;
 
 	/* CPU registers */
-	reg [15:0] r_a;
-	reg [15:0] r_b;
-	reg [15:0] r_c;
-	reg [15:0] r_d;
+	reg [15:0] r_a = 0;
+	reg [15:0] r_b = 0;
+	reg [15:0] r_c = 0;
+	reg [15:0] r_d = 0;
 
-	reg [15:0] r_ip;
-	reg [15:0] r_sp;
-	reg [15:0] r_flags;
+	reg [15:0] r_ip = 0;
+	reg [15:0] r_sp = 0;
+	reg [15:0] r_flags = 0;
 
 	assign mem_we = i_mem_we;
-	assign mem_en = 1'b1;
+	assign mem_en = 1;
 	assign mem_addr = i_mem_addr;
 	assign mem_out = i_mem_out;
 
-	assign data_bus = i_data_we ? i_data_out : 16'bz;
-
 	/* Internal hardware */
+
 	alu alu_inst(
 		.clk(clk),
 		.rstn(rstn),
@@ -117,9 +117,8 @@ module msc16rt(
 		.b(i_alu_b),
 		.op(i_alu_op),
 		.out(data_bus)
-		);
+	);
 
-	
 	always @(posedge clk) begin
 		i_mem_in <= mem_in;
 
@@ -147,6 +146,7 @@ module msc16rt(
 			end
 			S_DECODE: begin
 				/* read from ALU */
+				
 				r_ip <= data_bus;
 
 				/* read from memory */
@@ -177,16 +177,20 @@ module msc16rt(
 				i_cur_state <= i_instr;
 			end
 			S_CMP: begin
+				
+				r_ip <= data_bus;
 				i_alu_en <= 1;
 				i_alu_op <= ALU_SUB;
 				i_alu_a <= i_r1;
 				i_alu_b <= i_r2;
 
-				i_next_state <= S_CMP_2;
+				i_cur_state <= S_CMP_2;
 			end
 			S_CMP_2: begin
 				i_result <= data_bus;
 				i_alu_en <= 0;
+
+				i_cur_state <= S_RESULT;
 			end
 			S_ADD: begin
 				i_alu_en <= 1;
@@ -273,6 +277,7 @@ module msc16rt(
 				i_cur_state <= S_ST_2;
 			end
 			S_ST_2: begin
+				
 				r_ip <= data_bus;
 				i_alu_en <= 0;
 
@@ -319,6 +324,7 @@ module msc16rt(
 				i_cur_state <= S_LD_2;
 			end
 			S_LD_2: begin
+				
 				r_ip <= data_bus;
 				i_alu_en <= 0;
 
@@ -391,23 +397,31 @@ module alu(
 	localparam OP_LSH = 3'b101;
 	localparam OP_RSH = 3'b110;
 
-	reg [15:0] result;
+	reg [15:0] result = 0;
+	reg [15:0] i_a = 0;
+	reg [15:0] i_b = 0;
+	reg [2:0] i_op = 0;
 
-	assign out = en ? result : 16'bz;
+	assign out = result;
 
-	always @(posedge clk) begin
+	always @(*) begin
 		if (!rstn) begin
 			result <= 16'b0;
 		end
 
-		case(op)
-		OP_ADD: result <= a + b;
-		OP_SUB: result <= a - b;
-		OP_AND: result <= a & b;
-		OP_OR: result <= a | b;
-		OP_XOR: result <= a ^ b;
-		OP_LSH: result <= a << b[3:0];
-		OP_RSH: result <= a >> b[3:0];
+		i_a <= a;
+		i_b <= b;
+		i_op <= op;
+
+		case(i_op)
+		OP_ADD: result <= i_a + i_b;
+		OP_SUB: result <= i_a - i_b;
+		OP_AND: result <= i_a & i_b;
+		OP_OR: result <= i_a | i_b;
+		OP_XOR: result <= i_a ^ i_b;
+		OP_LSH: result <= i_a << i_b[3:0];
+		OP_RSH: result <= i_a >> i_b[3:0];
+		default: result <= 16'b0;
 		endcase
 	end
 endmodule
